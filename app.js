@@ -33,7 +33,7 @@ app.get('/', async (req, res) => {
     </head>
     <body>
       <div class="card">
-        <span class="badge">Wersja 1.0 - Deployment OK</span>
+        <span class="badge">Wersja 2.0 - Auto-Deploy OK</span>
         <h1>Automatyzacja Deploymentu - Lab 4</h1>
         <p>Liczba odwiedzin w bazie Redis:</p>
         <div class="counter">${visits}</div>
