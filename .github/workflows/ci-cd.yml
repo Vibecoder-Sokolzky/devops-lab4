@@ -26,7 +26,7 @@ jobs:
         run: docker build -t devops-lab4-app:latest .
 
   test:
-    name: 2. Test
+    name: 2. Test (Jednostkowe + Integracyjne)
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -41,23 +41,50 @@ jobs:
       - name: Instalacja zależności
         run: npm install
 
-      - name: Uruchomienie testów automatycznych
+      - name: Testy jednostkowe
         run: npm test
 
-  deploy:
-    name: 3. Deploy (Środowisko testowe)
+      - name: Testy integracyjne (Docker Compose + Redis)
+        run: |
+          docker compose up -d
+          sleep 5
+          curl -f http://localhost:3000/health
+          curl -s http://localhost:3000 | grep "Liczba odwiedzin w bazie Redis"
+          docker compose down
+
+  deploy-k8s:
+    name: 3. Deploy (Kubernetes RollingUpdate)
     needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Pobranie kodu z repozytorium
         uses: actions/checkout@v4
 
-      - name: Wdrożenie na środowisko testowe (Docker Compose)
-        run: docker compose up -d
+      - name: Utworzenie klastra Kubernetes (Kind)
+        uses: helm/kind-action@v1
 
-      - name: Weryfikacja działania wdrożonej aplikacji (Healthcheck)
+      - name: Zbudowanie i załadowanie obrazu do klastra K8s
         run: |
-          sleep 5
-          curl -f http://localhost:3000/health
-          curl -s http://localhost:3000 | grep "Automatyzacja Deploymentu"
-          echo "Aplikacja wdrożona i zweryfikowana pomyślnie!"
+          docker build -t devops-lab4-app:latest .
+          kind load docker-image devops-lab4-app:latest
+
+      - name: Wdrożenie manifestów Kubernetes (ConfigMap, Deployment, Service)
+        run: |
+          kubectl apply -f k8s.yaml
+          kubectl rollout status deployment/lab4-app-deployment --timeout=60s
+
+      - name: Weryfikacja środowiska Kubernetes
+        run: |
+          kubectl get configmap,pods,svc -o wide
+
+  notify:
+    name: 4. Powiadomienie o wdrożeniu
+    needs: deploy-k8s
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wysłanie powiadomienia o statusie CI/CD
+        run: |
+          echo "🔔 POWIADOMIENIE CI/CD: Pipeline zakończony!"
+          echo "Status wdrożenia Kubernetes: ${{ needs.deploy-k8s.result }}"
+          echo "Powiadomienie e-mail GitHub Actions oraz log statusu zostały wygenerowane."
