@@ -1,0 +1,63 @@
+name: CI/CD Pipeline - Lab 4
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: 1. Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobranie kodu z repozytorium
+        uses: actions/checkout@v4
+
+      - name: Konfiguracja Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalacja zależności
+        run: npm install
+
+      - name: Budowanie obrazu Docker
+        run: docker build -t devops-lab4-app:latest .
+
+  test:
+    name: 2. Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobranie kodu z repozytorium
+        uses: actions/checkout@v4
+
+      - name: Konfiguracja Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalacja zależności
+        run: npm install
+
+      - name: Uruchomienie testów automatycznych
+        run: npm test
+
+  deploy:
+    name: 3. Deploy (Środowisko testowe)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobranie kodu z repozytorium
+        uses: actions/checkout@v4
+
+      - name: Wdrożenie na środowisko testowe (Docker Compose)
+        run: docker compose up -d
+
+      - name: Weryfikacja działania wdrożonej aplikacji (Healthcheck)
+        run: |
+          sleep 5
+          curl -f http://localhost:3000/health
+          curl -s http://localhost:3000 | grep "Automatyzacja Deploymentu"
+          echo "Aplikacja wdrożona i zweryfikowana pomyślnie!"

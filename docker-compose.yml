@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    container_name: lab4-web
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis://redis-db:6379
+    depends_on:
+      - redis-db
+    restart: unless-stopped
+
+  redis-db:
+    image: redis:7-alpine
+    container_name: lab4-redis
+    restart: unless-stopped
