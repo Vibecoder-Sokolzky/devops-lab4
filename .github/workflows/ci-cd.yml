@@ -62,11 +62,13 @@ jobs:
 
       - name: Utworzenie klastra Kubernetes (Kind)
         uses: helm/kind-action@v1
+        with:
+          cluster_name: kind
 
       - name: Zbudowanie i załadowanie obrazu do klastra K8s
         run: |
-          docker build -t devops-lab4-app:latest .
-          kind load docker-image devops-lab4-app:latest
+          DOCKER_BUILDKIT=0 docker build -t devops-lab4-app:latest .
+          kind load docker-image devops-lab4-app:latest --name kind
 
       - name: Wdrożenie manifestów Kubernetes (ConfigMap, Deployment, Service)
         run: |
